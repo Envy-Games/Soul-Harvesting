@@ -8,7 +8,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.BaseSpawner;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 
@@ -26,10 +25,16 @@ import javax.annotation.Nullable;
 public class SpawnerHelper {
 
     /**
-     * Check if there is a vanilla monster spawner block at the given position.
+     * Check if there is a spawner block entity at the given position.
+     * <p>
+     * Using the block entity type is slightly cheaper than looking up the
+     * block state and comparing against {@code Blocks.SPAWNER}, and is
+     * more flexible for modded spawners that reuse {@link SpawnerBlockEntity}.
      */
     public static boolean isSpawnerAt(Level level, BlockPos pos) {
-        return level.getBlockState(pos).is(Blocks.SPAWNER);
+        // Faster and more flexible: rely on the block entity type instead of the block state.
+        // This also supports modded spawners that reuse the vanilla SpawnerBlockEntity.
+        return level.getBlockEntity(pos) instanceof SpawnerBlockEntity;
     }
 
     /**
@@ -87,7 +92,6 @@ public class SpawnerHelper {
             return null;
         }
 
-        // Reuse our helper for registry lookup
         return getEntityTypeByName(entityId);
     }
 

@@ -1,7 +1,8 @@
 package com.styenvy.egsoulharvest.block;
 
 import com.mojang.serialization.MapCodec;
-import com.styenvy.egsoulharvest.blockentity.*;
+import com.styenvy.egsoulharvest.blockentity.BaseSoulHarvesterBlockEntity;
+import com.styenvy.egsoulharvest.blockentity.CaveSpiderHarvesterBlockEntity;
 import com.styenvy.egsoulharvest.init.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.EntityType;
@@ -14,8 +15,11 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 
-// Cave Spider Harvester
+/**
+ * Concrete Soul Harvester block for Cave Spiders.
+ */
 public class CaveSpiderHarvesterBlock extends BaseSoulHarvesterBlock {
+
     public static final MapCodec<CaveSpiderHarvesterBlock> CODEC = simpleCodec(CaveSpiderHarvesterBlock::new);
 
     public CaveSpiderHarvesterBlock(Properties properties) {
@@ -35,8 +39,16 @@ public class CaveSpiderHarvesterBlock extends BaseSoulHarvesterBlock {
 
     @Nullable
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> type) {
-        if (level.isClientSide()) return null;
-        return createTickerHelper(type, ModBlockEntities.CAVE_SPIDER_HARVESTER.get(), BaseSoulHarvesterBlockEntity::serverTick);
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(@NotNull Level level,
+                                                                  @NotNull BlockState state,
+                                                                  @NotNull BlockEntityType<T> type) {
+        if (level.isClientSide()) {
+            return null;
+        }
+        return createTickerHelper(
+                type,
+                ModBlockEntities.CAVE_SPIDER_HARVESTER.get(),
+                BaseSoulHarvesterBlockEntity::serverTick
+        );
     }
 }
