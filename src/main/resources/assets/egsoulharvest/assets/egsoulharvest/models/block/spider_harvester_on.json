@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "egsoulharvest:block/spider_harvester_on"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "egsoulharvest:soul_recycler",
+    "egsoulharvest:cave_spider_harvester",
+    "egsoulharvest:spider_harvester",
+    "egsoulharvest:zombie_harvester",
+    "egsoulharvest:skeleton_harvester",
+    "egsoulharvest:blaze_harvester",
+    "egsoulharvest:magma_cube_harvester"
+  ]
+}

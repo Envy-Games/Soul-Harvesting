@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.styenvy.egsoulharvest.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BaseSpawnerMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

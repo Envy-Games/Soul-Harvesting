@@ -1,0 +1,18 @@
+{
+  "itemGroup.egsoulharvest": "EG Soul Harvester",
+
+  "block.egsoulharvest.soul_recycler": "Soul Recycler",
+  "block.egsoulharvest.cave_spider_harvester": "Cave Spider Harvester",
+  "block.egsoulharvest.spider_harvester": "Spider Harvester",
+  "block.egsoulharvest.zombie_harvester": "Zombie Harvester",
+  "block.egsoulharvest.skeleton_harvester": "Skeleton Harvester",
+  "block.egsoulharvest.blaze_harvester": "Blaze Harvester",
+  "block.egsoulharvest.magma_cube_harvester": "Magma Cube Harvester",
+
+  "container.egsoulharvest.cave_spider_harvester": "Cave Spider Harvester",
+  "container.egsoulharvest.spider_harvester": "Spider Harvester",
+  "container.egsoulharvest.zombie_harvester": "Zombie Harvester",
+  "container.egsoulharvest.skeleton_harvester": "Skeleton Harvester",
+  "container.egsoulharvest.blaze_harvester": "Blaze Harvester",
+  "container.egsoulharvest.magma_cube_harvester": "Magma Cube Harvester"
+}

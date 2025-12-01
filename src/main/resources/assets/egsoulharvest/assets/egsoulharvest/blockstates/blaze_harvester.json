@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,powered=false": { "model": "egsoulharvest:block/blaze_harvester_off" },
+    "facing=south,powered=false": { "model": "egsoulharvest:block/blaze_harvester_off", "y": 180 },
+    "facing=west,powered=false": { "model": "egsoulharvest:block/blaze_harvester_off", "y": 270 },
+    "facing=east,powered=false": { "model": "egsoulharvest:block/blaze_harvester_off", "y": 90 },
+    "facing=north,powered=true": { "model": "egsoulharvest:block/blaze_harvester_on" },
+    "facing=south,powered=true": { "model": "egsoulharvest:block/blaze_harvester_on", "y": 180 },
+    "facing=west,powered=true": { "model": "egsoulharvest:block/blaze_harvester_on", "y": 270 },
+    "facing=east,powered=true": { "model": "egsoulharvest:block/blaze_harvester_on", "y": 90 }
+  }
+}
