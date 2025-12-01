@@ -1,5 +1,7 @@
-{
-  "itemGroup.examplemod": "Example Mod Tab",
-  "block.examplemod.example_block": "Example Block",
-  "item.examplemod.example_item": "Example Item"
+{  "container.egsoulharvest.blaze_harvester": "Blaze Harvester",
+"container.egsoulharvest.cave_spider_harvester": "Cave Spider Harvester",
+"container.egsoulharvest.magma_cube_harvester": "Magma Cube Harvester",
+"container.egsoulharvest.skeleton_harvester": "Skeleton Harvester",
+"container.egsoulharvest.spider_harvester": "Spider Harvester",
+"container.egsoulharvest.zombie_harvester": "Zombie Harvester"
 }

@@ -14,21 +14,19 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
@@ -36,7 +34,8 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.List;
 
-public abstract class BaseSoulHarvesterBlockEntity extends BlockEntity implements Container, net.minecraft.world.MenuProvider {
+public abstract class BaseSoulHarvesterBlockEntity extends BlockEntity
+        implements Container, net.minecraft.world.MenuProvider {
 
     private static final String ITEMS_TAG = "Items";
     private static final String TICK_COUNTER_TAG = "TickCounter";
@@ -60,14 +59,34 @@ public abstract class BaseSoulHarvesterBlockEntity extends BlockEntity implement
     }
 
     /**
-     * Get the entity type this harvester targets
+     * Get the entity type this harvester targets.
      */
     public abstract EntityType<?> getTargetEntityType();
 
     /**
-     * Get the display name for this harvester
+     * Get the display name for this harvester.
      */
     public abstract @NotNull Component getDisplayName();
+
+    /**
+     * Hook for the loot table this harvester should roll when generating loot.
+     * Default implementation: use the target entity's vanilla loot table:
+     *   minecraft:entities/<entity_id>
+     * Individual harvester block entities (e.g. blaze, magma cube) can override this
+     * to use custom mod loot tables such as:
+     *   egsoulharvest:harvesters/blaze_harvester
+     */
+    protected ResourceKey<LootTable> getHarvestLootTableKey() {
+        EntityType<?> entityType = getTargetEntityType();
+        ResourceLocation entityId = EntityType.getKey(entityType);
+
+        // Default: minecraft:entities/zombie, minecraft:entities/magma_cube, etc.
+        ResourceLocation lootTableId = ResourceLocation.fromNamespaceAndPath(
+                entityId.getNamespace(),
+                "entities/" + entityId.getPath()
+        );
+        return ResourceKey.create(Registries.LOOT_TABLE, lootTableId);
+    }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, BaseSoulHarvesterBlockEntity blockEntity) {
         blockEntity.tick(level, pos, state);
@@ -78,27 +97,19 @@ public abstract class BaseSoulHarvesterBlockEntity extends BlockEntity implement
             return;
         }
 
-        // Check if there's a valid spawner below
-        BlockPos spawnerPos = pos.below();
+        // "Active" = placed on a matching spawner below.
+        isActive = hasValidSpawnerBelow(level, pos);
 
-        // Update active state
-        isActive = SpawnerHelper.isSpawnerAt(level, spawnerPos) &&
-                SpawnerHelper.spawnerMatchesType(level, spawnerPos, getTargetEntityType());
-
-        // Update block state if needed
+        // Mirror active state into blockstate POWERED flag for visuals / logic.
         if (state.getValue(BaseSoulHarvesterBlock.POWERED) != isActive) {
-            level.setBlock(pos, state.setValue(BaseSoulHarvesterBlock.POWERED, isActive), 3);
+            level.setBlock(pos, state.setValue(BaseSoulHarvesterBlock.POWERED, isActive), Block.UPDATE_ALL);
         }
 
         if (!isActive) {
             return;
         }
 
-        // NOTE:
-        // Actual spawn *prevention* is handled by BaseSpawnerMixin, which cancels BaseSpawner#serverTick
-        // when a Soul Harvester / Soul Recycler is above the spawner. We don't touch spawnDelay here.
-
-        // Increment tick counter and generate loot
+        // Increment tick counter and generate loot periodically.
         tickCounter++;
         if (tickCounter >= ModConfig.HARVESTER_LOOT_INTERVAL.get()) {
             tickCounter = 0;
@@ -107,51 +118,60 @@ public abstract class BaseSoulHarvesterBlockEntity extends BlockEntity implement
     }
 
     /**
-     * Generate loot based on the target mob's loot table
+     * Check if there's a spawner below and its configured mob type matches this harvester.
      */
-    private void generateLoot(ServerLevel level, BlockPos pos) {
-        EntityType<?> entityType = getTargetEntityType();
-        ResourceLocation entityId = EntityType.getKey(entityType);
+    protected boolean hasValidSpawnerBelow(Level level, BlockPos pos) {
+        BlockPos spawnerPos = pos.below();
+        return SpawnerHelper.isSpawnerAt(level, spawnerPos)
+                && SpawnerHelper.spawnerMatchesType(level, spawnerPos, getTargetEntityType());
+    }
 
-        // Construct loot table location: minecraft:entities/zombie, etc.
-        ResourceLocation lootTableId = ResourceLocation.fromNamespaceAndPath(
-                entityId.getNamespace(),
-                "entities/" + entityId.getPath()
-        );
-        ResourceKey<LootTable> lootTableKey = ResourceKey.create(Registries.LOOT_TABLE, lootTableId);
+    /**
+     * Generate loot by rolling this harvester's configured loot table
+     * and inserting the results into the internal inventory.
+     * This does **not** simulate a mob "death" at all – we just treat the
+     * loot table as a generic reward generator. The spawner below is only
+     * used as a requirement/trigger (is there a matching, active spawner?)
+     * and for cosmetics.
+     */
+    protected void generateLoot(ServerLevel level, BlockPos pos) {
+        // Resolve the loot table to use (default: target entity's vanilla table,
+        // or per-harvester custom table if overridden).
+        ResourceKey<LootTable> lootTableKey = getHarvestLootTableKey();
+        LootTable lootTable = level.getServer()
+                .reloadableRegistries()
+                .getLootTable(lootTableKey);
 
-        LootTable lootTable = level.getServer().reloadableRegistries().getLootTable(lootTableKey);
-
-        // Create a dummy entity instance so we can satisfy LootContextParamSets.ENTITY requirements
-        Entity dummyEntity = entityType.create(level);
-        if (dummyEntity == null) {
-            return; // Some entity types can't be instantiated without extra data
+        // If the table is missing, this will be LootTable.EMPTY and just give no loot.
+        // Logging this helps diagnose bad IDs or missing JSON.
+        if (lootTable == LootTable.EMPTY) {
+            // You can swap this for a proper logger if desired.
+            System.out.println("[SoulHarvester] Missing or empty loot table: " + lootTableKey.location());
+            return;
         }
-        dummyEntity.setPos(Vec3.atCenterOf(pos));
 
-        // Create loot context (ENTITY param set requires THIS_ENTITY, ORIGIN, DAMAGE_SOURCE)
-        LootParams.Builder paramsBuilder = new LootParams.Builder(level)
-                .withParameter(LootContextParams.THIS_ENTITY, dummyEntity)
-                .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
-                .withParameter(LootContextParams.DAMAGE_SOURCE, level.damageSources().generic());
+        // We intentionally use the EMPTY param set here so the table behaves
+        // like a generic "reward" table, not a real entity death. No entity,
+        // no damage source – it simply rolls whatever items it defines.
+        LootParams params = new LootParams.Builder(level)
+                .create(LootContextParamSets.EMPTY);
 
-        // Generate loot
-        List<ItemStack> loot = lootTable.getRandomItems(paramsBuilder.create(LootContextParamSets.ENTITY));
+        List<ItemStack> loot = lootTable.getRandomItems(params);
 
-        // Add loot to inventory
+        // Insert generated loot into the harvester's inventory.
         for (ItemStack stack : loot) {
             insertItem(stack);
         }
     }
 
     /**
-     * Try to insert an item into the inventory
+     * Try to insert an item into the inventory.
      */
     private void insertItem(ItemStack stack) {
         for (int i = 0; i < inventory.getSlots() && !stack.isEmpty(); i++) {
             stack = inventory.insertItem(i, stack, false);
         }
-        // If we couldn't insert everything, it's just lost (inventory full)
+        // If we couldn't insert everything, it's just lost (inventory full).
     }
 
     @Override
@@ -180,6 +200,7 @@ public abstract class BaseSoulHarvesterBlockEntity extends BlockEntity implement
     }
 
     // Container implementation for vanilla compatibility
+
     @Override
     public int getContainerSize() {
         return inventory.getSlots();
@@ -230,9 +251,12 @@ public abstract class BaseSoulHarvesterBlockEntity extends BlockEntity implement
     }
 
     // MenuProvider implementation
+
     @Nullable
     @Override
-    public AbstractContainerMenu createMenu(int containerId, @NotNull Inventory playerInventory, @NotNull Player player) {
+    public AbstractContainerMenu createMenu(int containerId,
+                                            @NotNull Inventory playerInventory,
+                                            @NotNull Player player) {
         return new HarvesterMenu(containerId, playerInventory, this);
     }
 }
