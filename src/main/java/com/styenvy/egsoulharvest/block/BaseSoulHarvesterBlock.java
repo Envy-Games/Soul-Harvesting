@@ -2,6 +2,7 @@ package com.styenvy.egsoulharvest.block;
 
 import com.mojang.serialization.MapCodec;
 import com.styenvy.egsoulharvest.blockentity.BaseSoulHarvesterBlockEntity;
+import com.styenvy.egsoulharvest.init.ModTags;
 import com.styenvy.egsoulharvest.util.SpawnerHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -10,7 +11,9 @@ import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
@@ -129,6 +132,30 @@ public abstract class BaseSoulHarvesterBlock extends BaseEntityBlock {
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide());
+    }
+
+    /**
+     * Only items in #egsoulharvest:harvester_tools can actually make mining progress.
+     * Everyone else (non-tag tools, fists, etc.) gets 0 progress.
+     */
+    @Override
+    protected float getDestroyProgress(@NotNull BlockState state,
+                                       @NotNull Player player,
+                                       @NotNull BlockGetter level,
+                                       @NotNull BlockPos pos) {
+        // Creative always allowed
+        if (player.isCreative()) {
+            return super.getDestroyProgress(state, player, level, pos);
+        }
+
+        ItemStack held = player.getMainHandItem();
+        if (!held.is(ModTags.Items.HARVESTER_TOOLS)) {
+            // 0 = no mining progress, block never breaks from mining
+            return 0.0F;
+        }
+
+        // Correct tool (in tag) -> normal mining speed
+        return super.getDestroyProgress(state, player, level, pos);
     }
 
     /**

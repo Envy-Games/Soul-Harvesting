@@ -3,13 +3,16 @@ package com.styenvy.egsoulharvest.block;
 import com.mojang.serialization.MapCodec;
 import com.styenvy.egsoulharvest.blockentity.SoulRecyclerBlockEntity;
 import com.styenvy.egsoulharvest.init.ModBlockEntities;
+import com.styenvy.egsoulharvest.init.ModTags;
 import com.styenvy.egsoulharvest.util.SpawnerHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -92,7 +95,9 @@ public class SoulRecyclerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, @NotNull BlockState state, @NotNull BlockEntityType<T> type) {
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level,
+                                                                  @NotNull BlockState state,
+                                                                  @NotNull BlockEntityType<T> type) {
         if (level.isClientSide()) {
             return null;
         }
@@ -103,7 +108,11 @@ public class SoulRecyclerBlock extends BaseEntityBlock {
      * Right-click handler – shows energy + active state.
      */
     @Override
-    protected @NotNull InteractionResult useWithoutItem(@NotNull BlockState state, Level level, @NotNull BlockPos pos, @NotNull Player player, @NotNull BlockHitResult hitResult) {
+    protected @NotNull InteractionResult useWithoutItem(@NotNull BlockState state,
+                                                        Level level,
+                                                        @NotNull BlockPos pos,
+                                                        @NotNull Player player,
+                                                        @NotNull BlockHitResult hitResult) {
         if (!level.isClientSide()) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof SoulRecyclerBlockEntity recycler) {
@@ -127,6 +136,30 @@ public class SoulRecyclerBlock extends BaseEntityBlock {
     }
 
     /**
+     * Only items in #egsoulharvest:soul_recycler_tools can actually make mining progress.
+     * Everyone else (non-tag tools, fists, etc.) gets 0 progress.
+     */
+    @Override
+    protected float getDestroyProgress(@NotNull BlockState state,
+                                       @NotNull Player player,
+                                       @NotNull BlockGetter level,
+                                       @NotNull BlockPos pos) {
+        // Creative always allowed
+        if (player.isCreative()) {
+            return super.getDestroyProgress(state, player, level, pos);
+        }
+
+        ItemStack held = player.getMainHandItem();
+        if (!held.is(ModTags.Items.SOUL_RECYCLER_TOOLS)) {
+            // 0 = no mining progress, block never breaks from mining
+            return 0.0F;
+        }
+
+        // Correct tool (in tag) -> normal mining speed
+        return super.getDestroyProgress(state, player, level, pos);
+    }
+
+    /**
      * Must sit directly on top of a spawner.
      */
     @Override
@@ -136,7 +169,11 @@ public class SoulRecyclerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void onPlace(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState oldState, boolean isMoving) {
+    public void onPlace(@NotNull BlockState state,
+                        @NotNull Level level,
+                        @NotNull BlockPos pos,
+                        @NotNull BlockState oldState,
+                        boolean isMoving) {
         super.onPlace(state, level, pos, oldState, isMoving);
         if (!level.isClientSide() && !oldState.is(this)) {
             updatePoweredState(level, pos, state);
@@ -144,7 +181,12 @@ public class SoulRecyclerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void neighborChanged(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull Block block, @NotNull BlockPos fromPos, boolean isMoving) {
+    public void neighborChanged(@NotNull BlockState state,
+                                @NotNull Level level,
+                                @NotNull BlockPos pos,
+                                @NotNull Block block,
+                                @NotNull BlockPos fromPos,
+                                boolean isMoving) {
         super.neighborChanged(state, level, pos, block, fromPos, isMoving);
         if (!level.isClientSide()) {
             // If the spawner below is gone, drop this block.
