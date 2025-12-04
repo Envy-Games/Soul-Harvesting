@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:block/cube_all",
-  "textures": {
-    "all": "egsoulharvest:block/soul_recycler_on"
-  }
+	"parent": "minecraft:block/cube_all",
+	"textures": {
+		"all": "egsoulharvest:block/soul_recycler_on"
+	}
 }
